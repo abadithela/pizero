@@ -1728,7 +1728,6 @@ dependencies = [
     { name = "opencv-python" },
     { name = "pyav" },
     { name = "pymunk" },
-    { name = "rerun-sdk" },
     { name = "setuptools" },
     { name = "termcolor" },
     { name = "torch" },
@@ -3695,25 +3694,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/42/f2/05f29bc3913aea15eb670be136045bf5c5bbf4b99ecb839da9b422bb2c85/requests-oauthlib-2.0.0.tar.gz", hash = "sha256:b3dffaebd884d8cd778494369603a9e7b58d29111bf6b41bdc2dcd87203af4e9", size = 55650 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3b/5d/63d4ae3b9daea098d5d6f5da83984853c1bbacd5dc826764b249fe119d24/requests_oauthlib-2.0.0-py2.py3-none-any.whl", hash = "sha256:7dd8a5c40426b779b0868c404bdef9768deccf22749cde15852df527e6269b36", size = 24179 },
-]
-
-[[package]]
-name = "rerun-sdk"
-version = "0.21.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "attrs" },
-    { name = "numpy" },
-    { name = "pillow" },
-    { name = "pyarrow" },
-    { name = "typing-extensions" },
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1a/7b/2dda703d2d234e8bf73edc11c099bc14c04b6bad6f748b76ad0525925dd9/rerun_sdk-0.21.0-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:1e454ceea31c70ae9ec1bb26eaa82828661b7657ab4d2261ca0b94006d6a1975", size = 43464114 },
-    { url = "https://files.pythonhosted.org/packages/c7/11/de8d1d375624edc7dae25a9d76b769cddb9090ca55b8fd7ce5f93b975cf5/rerun_sdk-0.21.0-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:84ecb77b0b5bac71b53e849801ff073de89fcd2f1e0ca0da62fb18fcbeceadf0", size = 41643016 },
-    { url = "https://files.pythonhosted.org/packages/53/49/aefaa4f0e2ee685858aedaee2cc6cc4df8330055bdfbe88c6905e62d693d/rerun_sdk-0.21.0-cp38-abi3-manylinux_2_31_aarch64.whl", hash = "sha256:919d921165c3238490dbe5bf00a062c68fdd2c54dc14aac6a1914c82edb5d9c8", size = 46355630 },
-    { url = "https://files.pythonhosted.org/packages/10/63/405a1b601cf1253878b1aebef6764095b2e8139cf233a908c2ccc4ad4ffd/rerun_sdk-0.21.0-cp38-abi3-manylinux_2_31_x86_64.whl", hash = "sha256:897649aadcab7014b78096f93c84c61c00a227b80adaf0dec279924b5aab53d8", size = 47790175 },
-    { url = "https://files.pythonhosted.org/packages/87/5e/c7cf6379a7a42748f5961ec41faf0e38635c6e6d5cd95b63a2691f0b34dc/rerun_sdk-0.21.0-cp38-abi3-win_amd64.whl", hash = "sha256:2060bdb536a198f0f04789ba5ba771e66587e7851d668b3dfab257a5efa16819", size = 39216574 },
 ]
 
 [[package]]
