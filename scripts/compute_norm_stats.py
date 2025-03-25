@@ -9,9 +9,14 @@ import numpy as np
 import tqdm
 import tyro
 
+import openpi.models.pi0_fast as pi0_fast
 import openpi.shared.normalize as normalize
 import openpi.training.config as _config
+from openpi.training.config import DataConfig
+from openpi.training.config import LeRobotGuidedDataConfig
+from openpi.training.config import TrainConfig
 import openpi.training.data_loader as _data_loader
+import openpi.training.weight_loaders as weight_loaders
 import openpi.transforms as transforms
 
 
@@ -37,8 +42,21 @@ def create_dataset(config: _config.TrainConfig) -> tuple[_config.DataConfig, _da
     return data_config, dataset
 
 
-def main(config_name: str, max_frames: int | None = None):
-    config = _config.get_config(config_name)
+def main(repo_id: str, max_frames: int | None = None):
+    config = TrainConfig(
+        name="pi0_fast_guided",
+        model=pi0_fast.Pi0FASTConfig(action_dim=8, action_horizon=10, max_token_len=180),
+        data=LeRobotGuidedDataConfig(
+            repo_id=repo_id,
+            base_config=DataConfig(
+                local_files_only=True,  # Set to True for local-only datasets.
+                prompt_from_task=True,
+            ),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
+        num_train_steps=10_000,
+    )
+    # config = _config.get_config(config_name)
     data_config, dataset = create_dataset(config)
 
     num_frames = len(dataset)

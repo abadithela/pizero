@@ -29,7 +29,7 @@ from lerobot.common.datasets.lerobot_dataset import LEROBOT_HOME
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 import tyro
 
-REPO_NAME = "wenzhe-li/guided"  # Name of the output dataset, also used for the Hugging Face Hub
+REPO_NAME = "lihzha/guided"  # Name of the output dataset, also used for the Hugging Face Hub
 
 
 def load_hdf5(
@@ -90,6 +90,10 @@ def load_hdf5(
 
     return output, camera_indices_raw
 
+def get_traj_paths(data_dir):
+    traj_paths = [os.path.join(data_dir, traj_name) for traj_name in os.listdir(data_dir) if traj_name.endswith(".h5")]
+    return traj_paths
+
 
 def main(data_dir: str, *, push_to_hub: bool = False):
     # Clean up any existing dataset in the output directory
@@ -130,7 +134,7 @@ def main(data_dir: str, *, push_to_hub: bool = False):
         image_writer_processes=5,
     )
 
-    traj_paths = [os.path.join(data_dir, traj_name) for traj_name in os.listdir(data_dir) if traj_name.endswith(".h5")]
+    traj_paths = get_traj_paths(data_dir)
     for traj_path in tqdm(traj_paths):
         data, _ = load_hdf5(traj_path)
         for step in range(len(data["state"])):

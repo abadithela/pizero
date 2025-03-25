@@ -13,13 +13,18 @@ import jax.experimental
 import jax.numpy as jnp
 import optax
 import tqdm_loggable.auto as tqdm
+import tyro
 import wandb
 
 import openpi.models.model as _model
+import openpi.models.pi0_fast as pi0_fast
 import openpi.shared.array_typing as at
 import openpi.shared.nnx_utils as nnx_utils
 import openpi.training.checkpoints as _checkpoints
 import openpi.training.config as _config
+from openpi.training.config import DataConfig
+from openpi.training.config import LeRobotGuidedDataConfig
+from openpi.training.config import TrainConfig
 import openpi.training.data_loader as _data_loader
 import openpi.training.optimizer as _optimizer
 import openpi.training.sharding as sharding
@@ -190,9 +195,25 @@ def train_step(
     return new_state, info
 
 
-def main(config: _config.TrainConfig):
+def main(repo_id, exp_name, overwrite=True):
     init_logging()
     logging.info(f"Running on: {platform.node()}")
+
+    config = TrainConfig(
+        name="pi0_fast_guided",
+        model=pi0_fast.Pi0FASTConfig(action_dim=8, action_horizon=10, max_token_len=180),
+        data=LeRobotGuidedDataConfig(
+            repo_id=repo_id,
+            base_config=DataConfig(
+                local_files_only=True,  # Set to True for local-only datasets.
+                prompt_from_task=True,
+            ),
+        ),
+        weight_loader=_weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
+        num_train_steps=10_000,
+    )
+    config.exp_name = exp_name
+    config.overwrite = overwrite
 
     if config.batch_size % jax.device_count() != 0:
         raise ValueError(
@@ -270,4 +291,15 @@ def main(config: _config.TrainConfig):
 
 
 if __name__ == "__main__":
-    main(_config.cli())
+    # main(_config.cli())
+    # tyro.cli(main)
+    import argparse
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--repo_id", type=str, required=True)
+    parser.add_argument("--exp_name", type=str, required=True)
+    parser.add_argument("--overwrite", action="store_true")
+
+    args = parser.parse_args()
+    main(args.repo_id, args.exp_name, args.overwrite)
