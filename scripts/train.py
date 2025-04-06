@@ -13,11 +13,11 @@ import jax.experimental
 import jax.numpy as jnp
 import optax
 import tqdm_loggable.auto as tqdm
-import tyro
 import wandb
 
 import openpi.models.model as _model
 import openpi.models.pi0_fast as pi0_fast
+import openpi.models.pi0 as pi0
 import openpi.shared.array_typing as at
 import openpi.shared.nnx_utils as nnx_utils
 import openpi.training.checkpoints as _checkpoints
@@ -195,13 +195,50 @@ def train_step(
     return new_state, info
 
 
-def main(repo_id, exp_name, overwrite=True):
+def main(repo_id, exp_name, use_droid=0, freeze_llm=0, freeze_img=0, **kwargs):
     init_logging()
     logging.info(f"Running on: {platform.node()}")
 
+    # if use_droid:
+    #     weight_path = "s3://openpi-assets/checkpoints/pi0_fast_droid/params"
+    # else:
+    #     weight_path = "s3://openpi-assets/checkpoints/pi0_fast_base/params"
+    
+    if use_droid:
+        weight_path = "s3://openpi-assets/checkpoints/pi0_droid/params"
+    else:
+        weight_path = "s3://openpi-assets/checkpoints/pi0_base/params"
+
+    if freeze_llm and freeze_img:
+        # assert not freeze_img, "Cannot freeze both LLM and IMG."
+        freeze_filter = nnx.All(nnx_utils.PathRegex(".*llm.*"), nnx_utils.PathRegex(".*img.*"))
+    elif freeze_llm and not freeze_img:
+        freeze_filter = nnx.All(nnx_utils.PathRegex(".*llm.*"))
+    elif not freeze_llm and freeze_img:
+        freeze_filter = nnx.All(nnx_utils.PathRegex(".*img.*"))
+    else:  # not freeze_llm and not freeze_img
+        freeze_filter = nnx.Nothing()
+    
+    # config = TrainConfig(
+    #     name="pi0_fast_guided",
+    #     exp_name=exp_name,
+    #     model=pi0_fast.Pi0FASTConfig(action_dim=8, action_horizon=16, max_token_len=180),
+    #     data=LeRobotGuidedDataConfig(
+    #         repo_id=repo_id,
+    #         base_config=DataConfig(
+    #             local_files_only=True,  # Set to True for local-only datasets.
+    #             prompt_from_task=True,
+    #         ),
+    #     ),
+    #     weight_loader=_weight_loaders.CheckpointWeightLoader(weight_path),
+    #     freeze_filter=freeze_filter,
+    #     **kwargs,
+    # )
+    
     config = TrainConfig(
-        name="pi0_fast_guided",
-        model=pi0_fast.Pi0FASTConfig(action_dim=8, action_horizon=10, max_token_len=180),
+        name="pi0_base_guided",
+        exp_name=exp_name,
+        model=pi0.Pi0Config(),
         data=LeRobotGuidedDataConfig(
             repo_id=repo_id,
             base_config=DataConfig(
@@ -209,11 +246,16 @@ def main(repo_id, exp_name, overwrite=True):
                 prompt_from_task=True,
             ),
         ),
-        weight_loader=_weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
-        num_train_steps=10_000,
+        weight_loader=_weight_loaders.CheckpointWeightLoader(weight_path),
+        freeze_filter=freeze_filter,
+        **kwargs,
     )
-    config.exp_name = exp_name
-    config.overwrite = overwrite
+    
+    print(config.fsdp_devices)
+    print_kwargs = kwargs
+    print_kwargs.update({"use_droid": use_droid, "freeze_llm": freeze_llm, "freeze_img": freeze_img})
+    print(print_kwargs)  # For debugging purposes to see the passed arguments.
+    print(exp_name)
 
     if config.batch_size % jax.device_count() != 0:
         raise ValueError(
@@ -283,7 +325,8 @@ def main(repo_id, exp_name, overwrite=True):
             infos = []
         batch = next(data_iter)
 
-        if (step % config.save_interval == 0 and step > start_step) or step == config.num_train_steps - 1:
+        # if (step % config.save_interval == 0 and step > start_step) or step == config.num_train_steps - 1:
+        if step in (2500, 5000, 10000, 15000, 20000, 30000, 40000, 50000) or step == config.num_train_steps - 1:
             _checkpoints.save_state(checkpoint_manager, train_state, data_loader, step)
 
     logging.info("Waiting for checkpoint manager to finish")
@@ -297,9 +340,38 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
+    # Define known arguments
     parser.add_argument("--repo_id", type=str, required=True)
     parser.add_argument("--exp_name", type=str, required=True)
-    parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument("--use_droid", type=int)
+    parser.add_argument("--freeze_llm", type=int)
 
-    args = parser.parse_args()
-    main(args.repo_id, args.exp_name, args.overwrite)
+    # Parse known and unknown arguments
+    args, unknown_args = parser.parse_known_args()
+
+    # Convert args to dictionary
+    args_dict = vars(args)
+
+    def str_to_correct_type(value):
+        """Convert string values to correct types (int, float, bool, None)."""
+        if value.lower() == "none":  # Convert "None" (case insensitive) to Python None
+            return None
+        if value.isdigit():
+            return int(value)
+        try:
+            return float(value)
+        except ValueError:
+            return value  # Leave as string if it isn't a number
+
+    i = 0
+    while i < len(unknown_args):
+        key = unknown_args[i].lstrip("-")  # Remove leading '--'
+        if i + 1 < len(unknown_args) and not unknown_args[i + 1].startswith("--"):
+            args_dict[key] = str_to_correct_type(unknown_args[i + 1])
+            i += 2  # Skip key and value
+        else:
+            args_dict[key] = True  # Handle flags without values
+            i += 1
+
+    # Pass all arguments as keyword arguments
+    main(**args_dict)

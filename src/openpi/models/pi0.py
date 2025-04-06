@@ -153,6 +153,7 @@ class Pi0(_model.BaseModel):
                 embed_dtype=config.dtype,
             )
         )
+
         llm.lazy_init(rngs=rngs, method="init")
         img = nnx_bridge.ToNNX(
             _siglip.Module(

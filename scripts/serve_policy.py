@@ -89,6 +89,7 @@ def create_policy(args: Args) -> _policy.Policy:
     """Create a policy from the given arguments."""
     match args.policy:
         case Checkpoint():
+            print(_config.get_config(args.policy.config))
             return _policy_config.create_trained_policy(
                 _config.get_config(args.policy.config), args.policy.dir, default_prompt=args.default_prompt
             )
@@ -99,7 +100,7 @@ def create_policy(args: Args) -> _policy.Policy:
 def main(args: Args) -> None:
     policy = create_policy(args)
     policy_metadata = policy.metadata
-
+    
     # Record the policy's behavior.
     if args.record:
         policy = _policy.PolicyRecorder(policy, "policy_records")

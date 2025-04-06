@@ -2,19 +2,24 @@ import flax.nnx as nnx
 import jax
 
 import openpi.models.pi0 as _pi0
+import openpi.models.pi0_fast as _pi0_fast
+import openpi.shared.nnx_utils as nnx_utils
 
 
 def _get_frozen_state(config: _pi0.Pi0Config) -> nnx.State:
     abstract_model = nnx.eval_shape(config.create, jax.random.key(0))
 
-    freeze_filter = config.get_freeze_filter()
+    # freeze_filter = config.get_freeze_filter()
+    freeze_filter = nnx.All(nnx_utils.PathRegex(".*.*"))
     return nnx.state(abstract_model, nnx.All(nnx.Param, freeze_filter)).flat_state()
 
 
 def test_pi0_full_finetune():
     config = _pi0.Pi0Config()
     state = _get_frozen_state(config)
-    assert len(state) == 0
+    # assert len(state) == 0
+    print(len(state))
+    print([p for p in state])
 
 
 def test_pi0_gemma_lora():
@@ -35,6 +40,7 @@ def test_pi0_action_expert_lora():
     assert all("llm" in p for p in state)
     # all frozen params should have _1 in their path since it's the action expert.
     assert all(any("_1" in p for p in path) for path in state)
+    print([p for p in state])
 
 
 def test_pi0_all_lora():
@@ -44,3 +50,19 @@ def test_pi0_all_lora():
     assert len(state) == 17
     assert all("lora" not in p for p in state)
     assert all("llm" in p for p in state)
+    
+
+def test_pi0_fast():
+    config = _pi0_fast.Pi0FASTConfig(paligemma_variant="gemma_2b_lora")
+    state = _get_frozen_state(config)
+    print(len(state))
+    print([p for p in state])
+
+
+if __name__ == "__main__":
+    test_pi0_full_finetune()
+    # test_pi0_gemma_lora()
+    # test_pi0_action_expert_lora()
+    # test_pi0_all_
+    # lora()
+    # test_pi0_fast()

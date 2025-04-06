@@ -371,7 +371,7 @@ class TrainConfig:
     # Random seed that will be used by random generators during training.
     seed: int = 42
     # Global batch size.
-    batch_size: int = 32
+    batch_size: int = 128
     # Number of workers to use for the data loader. Increasing this number will speed up data loading but
     # will increase memory and CPU usage.
     num_workers: int = 2
@@ -400,7 +400,7 @@ class TrainConfig:
     # device memory will be reduced but training could potentially be slower.
     # eg. if total device is 4 and fsdp devices is 2; then the model will shard to 2 devices and run
     # data parallel between 2 groups of devices.
-    fsdp_devices: int = 8
+    fsdp_devices: int = 1
 
     @property
     def assets_dirs(self) -> pathlib.Path:
@@ -490,7 +490,7 @@ _CONFIGS = [
         name="pi0_fast_guided",
         model=pi0_fast.Pi0FASTConfig(action_dim=8, action_horizon=10, max_token_len=180),
         data=LeRobotGuidedDataConfig(
-            repo_id="wenzhe-li/guided",
+            repo_id="base_demo_120_uniform_new_cp_cp_pi_seed0_sim0_real150",
             base_config=DataConfig(
                 local_files_only=True,  # Set to True for local-only datasets.
                 prompt_from_task=True,
@@ -498,6 +498,19 @@ _CONFIGS = [
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
         num_train_steps=10_000,
+    ),
+    
+    TrainConfig(
+        name="pi0_base_guided",
+        model=pi0.Pi0Config(),
+        data=LeRobotGuidedDataConfig(
+            repo_id="base_demo_120_uniform_new_cp_cp_pi_seed0_sim0_real150",
+            base_config=DataConfig(
+                local_files_only=True,  # Set to True for local-only datasets.
+                prompt_from_task=True,
+            ),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
     ),
     #
     # Fine-tuning Libero configs.

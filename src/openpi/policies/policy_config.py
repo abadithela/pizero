@@ -13,6 +13,7 @@ from openpi.training import checkpoints as _checkpoints
 from openpi.training import config as _config
 import openpi.transforms as transforms
 
+import os
 
 @dataclasses.dataclass
 class PolicyConfig:
@@ -61,7 +62,9 @@ def create_trained_policy(
         # that the policy is using the same normalization stats as the original training process.
         if data_config.asset_id is None:
             raise ValueError("Asset id is required to load norm stats.")
-        norm_stats = _checkpoints.load_norm_stats(checkpoint_dir / "assets", data_config.asset_id)
+        norm_stats_dir = os.listdir(checkpoint_dir / "assets")[0]
+        # norm_stats = _checkpoints.load_norm_stats(checkpoint_dir / "assets", data_config.asset_id)
+        norm_stats = _checkpoints.load_norm_stats(checkpoint_dir / "assets", norm_stats_dir)
 
     return _policy.Policy(
         model,

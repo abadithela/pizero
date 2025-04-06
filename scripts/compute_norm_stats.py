@@ -10,13 +10,13 @@ import tqdm
 import tyro
 
 import openpi.models.pi0_fast as pi0_fast
+import openpi.models.pi0 as pi0
 import openpi.shared.normalize as normalize
 import openpi.training.config as _config
 from openpi.training.config import DataConfig
 from openpi.training.config import LeRobotGuidedDataConfig
 from openpi.training.config import TrainConfig
 import openpi.training.data_loader as _data_loader
-import openpi.training.weight_loaders as weight_loaders
 import openpi.transforms as transforms
 
 
@@ -43,9 +43,20 @@ def create_dataset(config: _config.TrainConfig) -> tuple[_config.DataConfig, _da
 
 
 def main(repo_id: str, max_frames: int | None = None):
+    # config = TrainConfig(
+    #     name="pi0_fast_guided",
+    #     model=pi0_fast.Pi0FASTConfig(action_dim=8, action_horizon=10, max_token_len=180),
+    #     data=LeRobotGuidedDataConfig(
+    #         repo_id=repo_id,
+    #         base_config=DataConfig(
+    #             local_files_only=True,  # Set to True for local-only datasets.
+    #             prompt_from_task=True,
+    #         ),
+    #     ),
+    # )
     config = TrainConfig(
-        name="pi0_fast_guided",
-        model=pi0_fast.Pi0FASTConfig(action_dim=8, action_horizon=10, max_token_len=180),
+        name="pi0_base_guided",
+        model=pi0.Pi0Config(),
         data=LeRobotGuidedDataConfig(
             repo_id=repo_id,
             base_config=DataConfig(
@@ -53,11 +64,15 @@ def main(repo_id: str, max_frames: int | None = None):
                 prompt_from_task=True,
             ),
         ),
-        weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_fast_base/params"),
-        num_train_steps=10_000,
     )
     # config = _config.get_config(config_name)
     data_config, dataset = create_dataset(config)
+
+    output_path = config.assets_dirs / data_config.repo_id
+    norm_stats_path = output_path / "norm_stats.json"
+    if norm_stats_path.exists():
+        print(f"Normalization stats already exist at {norm_stats_path}.")
+        return
 
     num_frames = len(dataset)
     shuffle = False
@@ -84,7 +99,6 @@ def main(repo_id: str, max_frames: int | None = None):
 
     norm_stats = {key: stats.get_statistics() for key, stats in stats.items()}
 
-    output_path = config.assets_dirs / data_config.repo_id
     print(f"Writing stats to: {output_path}")
     normalize.save(output_path, norm_stats)
 

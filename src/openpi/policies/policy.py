@@ -31,6 +31,7 @@ class Policy(BasePolicy):
         metadata: dict[str, Any] | None = None,
     ):
         self._sample_actions = nnx_utils.module_jit(model.sample_actions)
+        self._emb_prefix = nnx_utils.module_jit(model.embed_prefix)
         self._input_transform = _transforms.compose(transforms)
         self._output_transform = _transforms.compose(output_transforms)
         self._rng = rng or jax.random.key(0)
@@ -40,11 +41,18 @@ class Policy(BasePolicy):
     @override
     def infer(self, obs: dict) -> dict:  # type: ignore[misc]
         # Make a copy since transformations may modify the inputs in place.
+        batch_size = obs.pop("batch_size")
         inputs = jax.tree.map(lambda x: x, obs)
         inputs = self._input_transform(inputs)
+        if batch_size is not None:
+            # Make inputs["tokenized_prompt_mask"] and inputs["tokenized_prompt"] and inputs['image_mask'] from (d,) to (b, d)
+            inputs["image_mask"] = jax.tree.map(lambda x: jnp.repeat(x[np.newaxis, ...], batch_size, axis=0), inputs["image_mask"])
+            inputs["tokenized_prompt"] = jax.tree.map(lambda x: jnp.repeat(x[np.newaxis, ...], batch_size, axis=0), inputs["tokenized_prompt"])
+            inputs["tokenized_prompt_mask"] = jax.tree.map(lambda x: jnp.repeat(x[np.newaxis, ...], batch_size, axis=0), inputs["tokenized_prompt_mask"])
+        else:
+            inputs = jax.tree.map(lambda x: jnp.asarray(x)[np.newaxis, ...], inputs)
         # Make a batch and convert to jax.Array.
-        inputs = jax.tree.map(lambda x: jnp.asarray(x)[np.newaxis, ...], inputs)
-
+        inputs = jax.tree.map(lambda x: jnp.asarray(x), inputs)
         self._rng, sample_rng = jax.random.split(self._rng)
         outputs = {
             "state": inputs["state"],
@@ -52,8 +60,28 @@ class Policy(BasePolicy):
         }
 
         # Unbatch and convert to np.ndarray.
-        outputs = jax.tree.map(lambda x: np.asarray(x[0, ...]), outputs)
+        if batch_size is not None:
+            outputs = jax.tree.map(lambda x: np.asarray(x), outputs)
+        else:
+            outputs = jax.tree.map(lambda x: np.asarray(x[0, ...]), outputs)
         return self._output_transform(outputs)
+
+    def get_final_inputs(self, obs: dict, get_tokens=True) -> dict:
+        inputs = jax.tree.map(lambda x: x, obs)
+        inputs = self._input_transform(inputs)
+        inputs = jax.tree.map(lambda x: jnp.asarray(x)[np.newaxis, ...], inputs)
+        tokens = None
+        if get_tokens:
+            tokens, _, _ = self._emb_prefix(_model.Observation.from_dict(inputs))
+        return tokens
+
+    def get_visual_tokens(self, obs: dict) -> dict:
+        inputs = jax.tree.map(lambda x: x, obs)
+        inputs = self._input_transform(inputs)
+        inputs = jax.tree.map(lambda x: jnp.asarray(x)[np.newaxis, ...], inputs)
+        inputs.tokenized_prompt = None
+        tokens, _, _ = self._emb_prefix(_model.Observation.from_dict(inputs))
+        return tokens
 
     @property
     def metadata(self) -> dict[str, Any]:
