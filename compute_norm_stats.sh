@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=unet-robot    # Job name
-#SBATCH --output=logs/%A.out   # Output file
-#SBATCH --error=logs/%A.err    # Error file
+#SBATCH --job-name=pi0_stats    # Job name
+#SBATCH --output=logs/%A_pi0stats.out   # Output file
+#SBATCH --error=logs/%A_pi0stats.err    # Error file
 #SBATCH --time=24:00:00            # Maximum runtime
 #SBATCH -N 1
 #SBATCH --gres=gpu:1            # Request 1 GPU
