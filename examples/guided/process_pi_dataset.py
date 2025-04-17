@@ -172,7 +172,7 @@ def sample_paths(
                         add_path = True
                         while "failed" in sorted_paths[index]:
                             index += 1
-                            if index >= variation_keys[variation_idx] + 30:
+                            if index >= variation_keys[variation_idx] + num_per_instance:
                                 # raise ValueError(
                                 #     f"Too many failed paths for variation {variation_idx}. {sorted_paths}"
                                 # )
@@ -299,16 +299,22 @@ def load_hdf5(
             except Exception:
                 pass
     h5_file.close()
+    
+    if len(output["observation/robot_state/gripper_position"].shape) == 1:
+        output["observation/robot_state/gripper_position"] = output["observation/robot_state/gripper_position"][:, None]
+    
+    if len(output["action/gripper_position"].shape) == 1:
+        output["action/gripper_position"] = output["action/gripper_position"][:, None]
 
     output["state"] = np.concatenate(
         (
             output["observation/robot_state/joint_positions"],
-            output["observation/robot_state/gripper_position"][:, None],
+            output["observation/robot_state/gripper_position"],
         ),
         axis=1,
     )
     output["action"] = np.concatenate(
-        (output["action/joint_positions"], output["action/gripper_position"][:, None]),
+        (output["action/joint_positions"], output["action/gripper_position"]),
         axis=1,
     )
     keep_idx = ~output["observation/timestamp/skip_action"]
@@ -364,10 +370,22 @@ def load_sim_hdf5_for_training(
                 pass
     h5_file.close()
 
-    output["action/gripper_position"] = output["action/gripper_position"][:, None] if len(output["action/gripper_position"].shape) == 1 else output["action/gripper_position"]
-    output["observation/robot_state/gripper_position"] = (
-        output["observation/robot_state/gripper_position"][:, None] if len(output["observation/robot_state/gripper_position"].shape) == 1 else output["observation/robot_state/gripper_position"]
-    )
+    
+    output["observation/robot_state/joint_positions"] = output["observation/robot_state/joint_positions"].squeeze()
+    output["action/joint_position"] = output["action/joint_position"].squeeze()
+    
+    if len(output["action/gripper_position"].shape) == 1:
+        output["action/gripper_position"] = output["action/gripper_position"][:, None]
+    elif len(output["action/gripper_position"].shape) >= 3:
+        output["action/gripper_position"] = output["action/gripper_position"].squeeze()
+        output["action/gripper_position"] = output["action/gripper_position"][:, None]
+        
+    if len(output["observation/robot_state/gripper_position"].shape) == 1:
+        output["observation/robot_state/gripper_position"] = output["observation/robot_state/gripper_position"][:, None]
+    elif len(output["observation/robot_state/gripper_position"].shape) >= 3:
+        output["observation/robot_state/gripper_position"] = output["observation/robot_state/gripper_position"].squeeze()
+        output["observation/robot_state/gripper_position"] = output["observation/robot_state/gripper_position"][:, None]   
+    
 
     output["action/gripper_position"] = 1 - (output["action/gripper_position"] + 1) / 2
     output["observation/robot_state/gripper_position"] = 1 - (output["observation/robot_state/gripper_position"] / 0.04)
@@ -447,11 +465,12 @@ def process_pi_dataset(
     ), "Only one of real_data_ratio and num_real_traj should be specified"
 
     real_traj_paths, sim_traj_paths, num_traj_available = get_data_paths(input_paths)
+    
 
     sim_traj_paths = sample_paths(
         sim_traj_paths, num_sim_traj, sim_data_ratio, sample_sim_strat, delta=delta, num_instances=num_instances, num_per_instance=num_per_instance
     )
-    real_traj_paths = sample_paths(real_traj_paths, num_real_traj, real_data_ratio, sample_real_strat)
+    real_traj_paths = sample_paths(real_traj_paths, num_real_traj, real_data_ratio, sample_real_strat, delta=delta, num_instances=num_instances, num_per_instance=num_per_instance)
 
     num_real_traj = len(real_traj_paths)
     num_sim_traj = len(sim_traj_paths)

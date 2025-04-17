@@ -114,34 +114,34 @@ for ((i = 0; i < ${#path_groups[@]}; i++)); do
                 job_name=${path_name}_$((num_base_demos + sim_data_num + sim_data_num))
                 echo "$job_name"
 
-                # job_id=$(sbatch --parsable process_data.sh \
-                #     -in $INPUT_STRING \
-                #     --num_sim_traj ${distributed_sim_traj[*]} \
-                #     --num_real_traj 0 \
-                #     --seed "$seed" \
-                #     --additional_name ${additional_name}_${path_name}_pi \
-                #     --sample_sim_strat $sample_sim_strat \
-                #     --delta $delta \
-                #     --num_per_instance 30 \
-                #     --num_instances 4 \
-                #     )
+                job_id=$(sbatch --parsable process_data.sh \
+                    -in $INPUT_STRING \
+                    --num_sim_traj ${distributed_sim_traj[*]} \
+                    --num_real_traj 0 \
+                    --seed "$seed" \
+                    --additional_name ${additional_name}_${path_name}_pi \
+                    --sample_sim_strat $sample_sim_strat \
+                    --delta $delta \
+                    --num_per_instance 30 \
+                    --num_instances 4 \
+                    )
 
-                # job_id2=$(sbatch --parsable --dependency=afterok:$job_id compute_norm_stats.sh \
-                # --repo_id ${additional_name}_${path_name}_pi_seed${seed}_sim$((num_base_demos + sim_data_num + sim_data_num))_real0 \
-                # )
+                job_id2=$(sbatch --parsable --dependency=afterok:$job_id compute_norm_stats.sh \
+                --repo_id ${additional_name}_${path_name}_pi_seed${seed}_sim$((num_base_demos + sim_data_num + sim_data_num))_real0 \
+                )
 
-                # job_id3=$(sbatch --parsable --dependency=afterok:$job_id2 train.sh \
-                #     --exp_name $job_name \
-                #     --repo_id ${additional_name}_${path_name}_pi_seed${seed}_sim$((num_base_demos + sim_data_num + sim_data_num))_real0 \
-                #     --use_droid 0 \
-                #     --num_train_steps 5001 \
-                #     --keep_period 100 \
-                #     --batch_size 32 \
-                #     --freeze_llm 1 \
-                #     --freeze_img 1 \
-                #     --fsdp_devices 2 \
-                #     --ema_decay None \
-                #     --overwrite)
+                job_id3=$(sbatch --parsable --dependency=afterok:$job_id2 train.sh \
+                    --exp_name $job_name \
+                    --repo_id ${additional_name}_${path_name}_pi_seed${seed}_sim$((num_base_demos + sim_data_num + sim_data_num))_real0 \
+                    --use_droid 0 \
+                    --num_train_steps 5001 \
+                    --keep_period 100 \
+                    --batch_size 32 \
+                    --freeze_llm 1 \
+                    --freeze_img 1 \
+                    --fsdp_devices 2 \
+                    --ema_decay None \
+                    --overwrite)
 
                 cd ..
                 if [ ! -d "videos/${job_name}_grid" ]; then

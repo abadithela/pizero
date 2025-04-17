@@ -42,6 +42,9 @@ class Policy(BasePolicy):
     def infer(self, obs: dict) -> dict:  # type: ignore[misc]
         # Make a copy since transformations may modify the inputs in place.
         batch_size = obs.pop("batch_size")
+        if "seed" in obs:
+            seed = obs.pop("seed")
+            self._rng = jax.random.PRNGKey(seed)
         inputs = jax.tree.map(lambda x: x, obs)
         inputs = self._input_transform(inputs)
         if batch_size is not None:

@@ -8,7 +8,7 @@
 #SBATCH --gres=gpu:2            # Request 1 GPU
 #SBATCH --ntasks-per-node=1          # 1 task per node
 #SBATCH --cpus-per-task=8       # Reduced CPU per task
-#SBATCH --mem=200G                   # Memory per node
+#SBATCH --mem=100G                   # Memory per node
 #SBATCH --partition=all              # Or specify GPU partition if needed
 
 CONFIGS=("$@")
