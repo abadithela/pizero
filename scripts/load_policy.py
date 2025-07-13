@@ -204,7 +204,6 @@ def main(args: Args) -> None:
     if args.record:
         policy = _policy.PolicyRecorder(policy, "policy_records")
     
-
     # nominal_dataset = AnomalyNominalDataset(dataset_path=f"{DATA_DIR}/jsg_jsg_2cam_192_base_demo_240_uniform_new_cp_distractor_paths_seed0_sim0_real260/anomaly_dataset.npz")
     # anomaly_dataset = ImageDataset(images_path=f"{DATA_DIR}/anomaly_dataset")
     
